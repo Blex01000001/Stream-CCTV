@@ -42,8 +42,8 @@ html, body { height: 100%; margin: 0; background: #000; color: var(--text); over
 .tile { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #050505; border: 1px solid #262626; overflow: hidden; }
 .tile.audio { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(46, 204, 113, .55); }
 .tile.zoomed { z-index: 5; }
-.slot-empty { display: flex; align-items: center; justify-content: center; border: 1px dashed #2f2f2f; color: #555; cursor: pointer; min-width: 0; min-height: 0; }
-.slot-empty:hover { color: #aaa; border-color: #555; }
+.slot-empty { display: flex; align-items: center; justify-content: center; border: 2px dashed #6a6a6a; color: #a8a8a8; font-size: 20px; font-weight: 700; letter-spacing: .5px; cursor: pointer; min-width: 0; min-height: 0; }
+.slot-empty:hover { color: #fff; border-color: var(--accent); background: rgba(46, 204, 113, .07); }
 
 .titlebar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 26px; padding: 0 4px 0 6px; background: #141414; color: #ccc; cursor: pointer; user-select: none; touch-action: none; }
 .tile.audio .titlebar { background: #11271a; }
