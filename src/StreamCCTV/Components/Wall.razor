@@ -1,6 +1,7 @@
 @implements IAsyncDisposable
 @inject WallState State
 @inject IJSRuntime JS
+@inject Loc L
 
 @* Tiles 清單的 DOM 順序永遠不變；位置只靠各格的 grid-area 決定。 *@
 <div class="wall" style="grid-template-columns:repeat(@State.Grid.Cols,1fr);grid-template-rows:repeat(@State.Grid.Rows,1fr);">
@@ -10,7 +11,7 @@
     }
     @foreach (var (slot, area) in State.FreeSlots())
     {
-        <div @key='"slot-" + slot' class="slot-empty" data-slot="@slot" style="grid-area:@area;" @onclick="State.RequestFocusInput">＋ 加入</div>
+        <div @key='"slot-" + slot' class="slot-empty" data-slot="@slot" style="grid-area:@area;" @onclick="State.RequestFocusInput">@L["wall.add"]</div>
     }
 </div>
 

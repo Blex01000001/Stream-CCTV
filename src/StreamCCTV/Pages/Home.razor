@@ -2,8 +2,9 @@
 @implements IAsyncDisposable
 @inject WallState State
 @inject IJSRuntime JS
+@inject Loc L
 
-<PageTitle>直播監視器牆</PageTitle>
+<PageTitle>@L["app.title"]</PageTitle>
 
 <div class="app @(State.HideBars ? "hide-bars" : "")">
     <Toolbar OnOpenSettings="() => _settings = true" OnOpenHelp="() => _help = true" />
@@ -32,6 +33,8 @@
     protected override async Task OnInitializedAsync()
     {
         State.OnChange += Refresh;
+        L.OnChange += State.Notify;   // 切換語言時重繪所有元件
+        await L.InitAsync();
         await State.LoadAsync();
     }
 
@@ -70,6 +73,7 @@
     public async ValueTask DisposeAsync()
     {
         State.OnChange -= Refresh;
+        L.OnChange -= State.Notify;
         try { if (_kb is not null) { await _kb.InvokeVoidAsync("dispose"); await _kb.DisposeAsync(); } } catch { }
         _self?.Dispose();
     }

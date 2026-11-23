@@ -1,6 +1,7 @@
 @implements IAsyncDisposable
 @inject WallState State
 @inject PlayerService Player
+@inject Loc L
 
 @* 播放器容器 .player-host 內不放任何 Razor 內容，iframe 由 player.js 建立。 *@
 <div class="tile @(IsAudio ? "audio" : "") @(Zoomed ? "zoomed" : "") @(Dim ? "dim" : "")"
@@ -13,12 +14,12 @@
                   OnZoom="() => State.ToggleZoom(Tile.Id)" />
     <div class="tile-body">
         <div class="player-box"><div class="player-host" @ref="_host"></div></div>
-        <div class="tile-overlay @(Control ? "off" : "")" @onclick="() => State.ToggleAudioAsync(Tile.Id)"></div>
+        <div class="tile-overlay @(Control ? "off" : "")" data-hint="@L["tile.hint"]" @onclick="() => State.ToggleAudioAsync(Tile.Id)"></div>
         @if (Tile.Status is TileStatus.Error or TileStatus.NotLive or TileStatus.Offline)
         {
             <div class="tile-msg @(Tile.Status == TileStatus.Error ? "err" : "")">
                 <div class="msg-text">@Message</div>
-                <a class="msg-link" href="@Tile.OpenUrl" target="_blank" rel="noopener">在 @Tile.OpenSiteName 開啟</a>
+                <a class="msg-link" href="@Tile.OpenUrl" target="_blank" rel="noopener">@L.F("tile.open", Tile.OpenSiteName)</a>
             </div>
         }
     </div>
@@ -38,16 +39,16 @@
     string Style => $"grid-area:{Tile.GridArea};";
     string Message => Tile.Status switch
     {
-        TileStatus.NotLive => "未開台",
-        TileStatus.Offline => "離線",
-        _ => Tile.StatusMessage ?? "無法播放"
+        TileStatus.NotLive => L["tile.notlive"],
+        TileStatus.Offline => L["tile.offline"],
+        _ => Tile.StatusMessage is { } k ? L[k] : L["tile.cantplay"]
     };
 
     // 只有影響外觀（外層 style、標題列、狀態）的值變了才重繪；播放器容器本身永遠不被重建。
     protected override bool ShouldRender()
     {
         var key = string.Join('|', Tile.GridArea, Tile.DisplayName, Tile.Viewers, Tile.Status, Tile.StatusMessage,
-            IsAudio, Control, Zoomed, Tile.Id);
+            IsAudio, Control, Zoomed, Tile.Id, L.Lang);
         if (key == _lastKey) return false;
         _lastKey = key;
         return true;
@@ -77,14 +78,14 @@
                 if (Tile.Source == TileSource.YouTubeChannel && data is "100" or "101" or "150" or "2")
                     State.SetStatus(Tile.Id, TileStatus.NotLive);
                 else
-                    State.SetStatus(Tile.Id, TileStatus.Error, data switch
+                    State.SetStatus(Tile.Id, TileStatus.Error, data switch   // StatusMessage 存的是在地化鍵值
                     {
-                        "2" => "影片 ID 無效",
-                        "5" => "播放器發生錯誤，請重新整理",
-                        "100" => "影片不存在、已刪除或設為私人",
-                        "101" or "150" => "此影片禁止嵌入或為會員限定",
-                        "script" => "播放器腳本載入失敗（網路或擴充功能封鎖？）",
-                        _ => "無法播放（錯誤 " + data + "）"
+                        "2" => "err.2",
+                        "5" => "err.5",
+                        "100" => "err.100",
+                        "101" or "150" => "err.101",
+                        "script" => "err.script",
+                        _ => "tile.cantplay"
                     });
                 break;
             case "muteMismatch":

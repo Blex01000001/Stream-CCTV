@@ -13,10 +13,11 @@ public class WallState
     readonly PlayerService _player;
     readonly StorageService _storage;
     readonly NavigationManager _nav;
+    readonly Loc _loc;
 
-    public WallState(PlayerService player, StorageService storage, NavigationManager nav)
+    public WallState(PlayerService player, StorageService storage, NavigationManager nav, Loc loc)
     {
-        _player = player; _storage = storage; _nav = nav;
+        _player = player; _storage = storage; _nav = nav; _loc = loc;
     }
 
     public List<Tile> Tiles { get; } = new();
@@ -144,7 +145,7 @@ public class WallState
 
     public Tile? AddTile(TileSource source, string reference, string? name = null)
     {
-        if (HasSource(source, reference)) { ShowNotice("這個畫面已經在牆上了"); return null; }
+        if (HasSource(source, reference)) { ShowNotice(_loc["n.duplicate"]); return null; }
 
         int slot;
         if (Layout.Auto)
@@ -164,7 +165,7 @@ public class WallState
                 Normalize();
                 used = Tiles.Select(t => t.Slot).ToHashSet();
                 slot = bigger.Auto ? Tiles.Count : Enumerable.Range(0, bigger.Capacity).First(i => !used.Contains(i));
-                ShowNotice($"目前布局已滿，已自動切換為「{bigger.Name}」");
+                ShowNotice(_loc.F("n.full", _loc.LayoutName(bigger)));
             }
         }
 
@@ -185,7 +186,7 @@ public class WallState
             if (p is null) failed.Add(item);
             else AddTile(p.Source, p.Ref);
         }
-        if (failed.Count > 0) ShowNotice("無法辨識：" + string.Join("、", failed));
+        if (failed.Count > 0) ShowNotice(_loc.F("n.unrecognized", string.Join(", ", failed)));
         return failed;
     }
 
@@ -228,7 +229,7 @@ public class WallState
         if (!target.Auto && Tiles.Count > target.Capacity)
         {
             target = Layouts.AutoPlaceholder;
-            ShowNotice("格數超過該布局容量，已改用「自動」布局");
+            ShowNotice(_loc["n.toomany"]);
         }
         Layout = target;
         Normalize(); Save(); Notify();
