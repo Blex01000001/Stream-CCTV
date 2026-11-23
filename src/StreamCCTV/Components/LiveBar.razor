@@ -1,13 +1,14 @@
 @implements IDisposable
 @inject WallState State
 @inject IHolodexService Holodex
+@inject Loc L
 
 @if (HasKey)
 {
     <div class="livebar">
         @if (_error is not null)
         {
-            <span class="live-err">⚠ @_error</span>
+            <span class="live-err">⚠ @L.F(_error, _detail ?? "")</span>
         }
         @foreach (var e in Entries)
         {
@@ -21,7 +22,7 @@
         }
         @if (_loaded && !Entries.Any() && _error is null)
         {
-            <span class="live-empty">目前沒有符合「@State.Settings.FilterKeyword」的直播</span>
+            <span class="live-empty">@L.F("live.empty", State.Settings.FilterKeyword)</span>
         }
     </div>
 }
@@ -30,7 +31,7 @@
     record LiveEntry(TileSource Source, string Ref, string Name, string? Photo, int? Viewers, string Title);
 
     List<HolodexVideo> _videos = new();
-    string? _error;
+    string? _error, _detail;
     bool _loaded;
     CancellationTokenSource? _cts;
 
@@ -90,7 +91,7 @@
     {
         var res = await Holodex.GetLiveAsync(State.Settings.HolodexApiKey, State.Settings.Org, ct);
         if (ct.IsCancellationRequested) return;
-        if (res.Error is not null) _error = res.Error;
+        if (res.Error is not null) { _error = res.Error; _detail = res.Detail; }
         else
         {
             _error = null; _videos = res.Videos; _loaded = true;

@@ -38,12 +38,12 @@ public class HolodexService : IHolodexService
         {
             using var res = await _http.SendAsync(Req(apiKey, org), ct);
             if (!res.IsSuccessStatusCode)
-                return new(new(), res.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized
-                    ? "Holodex API Key 無效或被拒絕" : $"Holodex 回應 {(int)res.StatusCode}");
+                return res.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized
+                    ? new(new(), "live.denied") : new(new(), "live.http", ((int)res.StatusCode).ToString());
             var list = await res.Content.ReadFromJsonAsync<List<HolodexVideo>>(Json, ct) ?? new();
             return new(list, null);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception e) { return new(new(), "無法連線 Holodex：" + e.Message); }
+        catch (Exception e) { return new(new(), "live.conn", e.Message); }
     }
 }

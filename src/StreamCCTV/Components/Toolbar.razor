@@ -2,41 +2,53 @@
 @inject WallState State
 @inject StorageService Storage
 @inject IJSRuntime JS
+@inject Loc L
 
 <div class="toolbar">
     <textarea @ref="_input" rows="1" class="add-input"
-              placeholder="貼上 YouTube / Twitch 網址、影片 ID、UC 頻道 ID（Enter 加入，可多行）"></textarea>
-    <button class="btn primary" @onclick="AddAsync">加入</button>
+              placeholder="@L["tb.placeholder"]"></textarea>
+    <button class="btn primary" @onclick="AddAsync">@L["tb.add"]</button>
 
-    <select class="sel" title="布局" @onchange="OnLayout">
+    @foreach (var (id, n, c, r) in Quick)
+    {
+        <button class="btn lay @(State.Layout.Id == id ? "on" : "")" title="@L.F("tb.split", n, $"{c}×{r}")" @onclick="() => State.SetLayout(id)">
+            <span class="lay-ico" style="grid-template-columns:repeat(@c,1fr);grid-template-rows:repeat(@r,1fr)">
+                @for (var i = 0; i < c * r; i++) { <i></i> }
+            </span>@n
+        </button>
+    }
+
+    <select class="sel" title="@L["tb.layout"]" @onchange="OnLayout">
         @foreach (var l in Layouts.All)
         {
-            <option value="@l.Id" selected="@(State.Layout.Id == l.Id)">@l.Name</option>
+            <option value="@l.Id" selected="@(State.Layout.Id == l.Id)">@L.LayoutName(l)</option>
         }
     </select>
 
-    <select class="sel" title="成員名單" @onchange="OnMember">
-        <option value="">成員名單…</option>
+    <select class="sel" title="@L["tb.members"]" @onchange="OnMember">
+        <option value="">@L["tb.members"]</option>
         @foreach (var m in State.Members)
         {
-            <option value="@m.Name" selected="@(_member == m.Name)">@m.Name（@m.Entries.Count）</option>
+            <option value="@m.Name" selected="@(_member == m.Name)">@m.Name (@m.Entries.Count)</option>
         }
     </select>
-    <button class="btn" disabled="@(string.IsNullOrEmpty(_member))" @onclick="LoadMember">載入</button>
+    <button class="btn" disabled="@(string.IsNullOrEmpty(_member))" @onclick="LoadMember">@L["tb.load"]</button>
 
-    <button class="btn" @onclick="ShareAsync">分享</button>
+    <button class="btn" @onclick="ShareAsync">@L["tb.share"]</button>
 
-    <label class="vol" title="目前音源格的音量">
+    <label class="vol" title="@L["tb.volume"]">
         🔊 <input type="range" min="0" max="100" value="@State.Settings.Volume" @oninput="OnVolume" />
     </label>
-    <button class="btn" title="全部靜音（M）" @onclick="State.MuteAllAsync">🔇 全靜音</button>
+    <button class="btn" title="@L["tb.muteall.tip"]" @onclick="State.MuteAllAsync">🔇 @L["tb.muteall"]</button>
 
     <span class="spacer"></span>
-    <button class="btn @(State.GlobalControl ? "on" : "")" title="全域控制模式（C）" @onclick="State.ToggleGlobalControl">🎛</button>
-    <button class="btn" title="隱藏工具列與標題列（H）" @onclick="State.ToggleHideBars">隱藏</button>
-    <button class="btn" title="全螢幕（F）" @onclick="FullscreenAsync">⛶</button>
-    <button class="btn" title="設定" @onclick="OnOpenSettings">⚙</button>
-    <button class="btn" title="快捷鍵（?）" @onclick="OnOpenHelp">?</button>
+    <button class="btn @(State.GlobalControl ? "on" : "")" title="@L["tb.control"]" @onclick="State.ToggleGlobalControl">🎛</button>
+    <button class="btn" title="@L["tb.hide.tip"]" @onclick="State.ToggleHideBars">@L["tb.hide"]</button>
+    <button class="btn" title="@L["tb.fullscreen"]" @onclick="FullscreenAsync">⛶</button>
+    <button class="btn" title="@L["tb.settings"]" @onclick="OnOpenSettings">⚙</button>
+    <button class="btn" title="@L["tb.help"]" @onclick="OnOpenHelp">?</button>
+    <span class="sep"></span>
+    <button class="btn lang" title="@L["tb.lang"]" @onclick="L.Toggle">🌐 @(L.IsZh ? "中文" : "EN")</button>
 </div>
 
 @code {
@@ -47,6 +59,7 @@
     IJSObjectReference? _kb;
     DotNetObjectReference<Toolbar>? _self;
     string _member = "";
+    static readonly (string Id, int N, int C, int R)[] Quick = { ("2x2", 4, 2, 2), ("3x2", 6, 3, 2), ("3x3", 9, 3, 3) };
 
     protected override void OnInitialized()
     {
@@ -95,7 +108,7 @@
     {
         var url = State.BuildShareUrl();
         var ok = await Storage.CopyToClipboardAsync(url);
-        State.ShowNotice(ok ? "已複製分享連結到剪貼簿" : "無法複製，連結：" + url);
+        State.ShowNotice(ok ? L["tb.copied"] : L.F("tb.copyfail", url));
     }
 
     async Task FullscreenAsync()

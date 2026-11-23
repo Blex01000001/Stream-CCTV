@@ -1,24 +1,25 @@
 @inject WallState State
 @inject IHolodexService Holodex
+@inject Loc L
 
 <div class="modal-back" @onclick="OnClose">
     <div class="modal wide" @onclick:stopPropagation="true">
-        <h2>設定 <button class="btn" @onclick="OnClose">✕</button></h2>
+        <h2>@L["set.title"] <button class="btn" @onclick="OnClose">✕</button></h2>
 
         <h3>Holodex</h3>
         <div class="form">
             <label>API Key
-                <input type="password" autocomplete="off" @bind="_key" @bind:event="oninput" placeholder="只存在這台瀏覽器的 localStorage" />
+                <input type="password" autocomplete="off" @bind="_key" @bind:event="oninput" placeholder="@L["set.key.ph"]" />
             </label>
-            <label>組織 (org)
+            <label>@L["set.org"]
                 <input @bind="_org" @bind:event="oninput" />
             </label>
-            <label>標題關鍵字 / topic
-                <input @bind="_keyword" @bind:event="oninput" placeholder="留空＝顯示全部" />
+            <label>@L["set.keyword"]
+                <input @bind="_keyword" @bind:event="oninput" placeholder="@L["set.keyword.ph"]" />
             </label>
             <div class="row">
-                <button class="btn primary" @onclick="SaveSettings">儲存</button>
-                <button class="btn" disabled="@(string.IsNullOrWhiteSpace(_key) || _probing)" @onclick="ProbeAsync">探勘 Holodex（顯示原始 JSON）</button>
+                <button class="btn primary" @onclick="SaveSettings">@L["set.save"]</button>
+                <button class="btn" disabled="@(string.IsNullOrWhiteSpace(_key) || _probing)" @onclick="ProbeAsync">@L["set.probe"]</button>
             </div>
             @if (_probe is not null)
             {
@@ -26,11 +27,11 @@
             }
         </div>
 
-        <h3>成員名單</h3>
+        <h3>@L["mem.title"]</h3>
         <div class="form">
             <div class="row">
                 <select class="sel" @onchange="OnPick">
-                    <option value="">＋ 新增名單</option>
+                    <option value="">@L["mem.new"]</option>
                     @foreach (var m in _members)
                     {
                         <option value="@m.Name" selected="@(_editing == m.Name)">@m.Name</option>
@@ -38,14 +39,14 @@
                 </select>
                 @if (_editing is not null)
                 {
-                    <button class="btn danger" @onclick="DeleteMember">刪除此名單</button>
+                    <button class="btn danger" @onclick="DeleteMember">@L["mem.delete"]</button>
                 }
             </div>
-            <label>名稱 <input @bind="_mName" @bind:event="oninput" /></label>
-            <label>頻道清單（每行一個網址 / 影片 ID / 頻道 ID）
+            <label>@L["mem.name"] <input @bind="_mName" @bind:event="oninput" /></label>
+            <label>@L["mem.entries"]
                 <textarea rows="6" @bind="_mEntries" @bind:event="oninput"></textarea>
             </label>
-            <div class="row"><button class="btn primary" @onclick="SaveMember">@(_editing is null ? "新增名單" : "儲存修改")</button></div>
+            <div class="row"><button class="btn primary" @onclick="SaveMember">@(_editing is null ? L["mem.create"] : L["mem.update"])</button></div>
         </div>
     </div>
 </div>
@@ -76,19 +77,19 @@
             FilterKeyword = _keyword.Trim(),
             Volume = State.Settings.Volume
         });
-        State.ShowNotice("設定已儲存");
+        State.ShowNotice(L["set.saved"]);
     }
 
     async Task ProbeAsync()
     {
-        _probing = true; _probe = "讀取中…";
+        _probing = true; _probe = L["set.loading"];
         try
         {
             var raw = await Holodex.GetLiveRawAsync(_key.Trim(), string.IsNullOrWhiteSpace(_org) ? "Hololive" : _org.Trim());
             Console.WriteLine(raw);   // 完整內容也輸出到瀏覽器 console
-            _probe = raw.Length > 6000 ? raw[..6000] + "\n…（已截斷，完整內容見瀏覽器 console）" : raw;
+            _probe = raw.Length > 6000 ? raw[..6000] + "\n" + L["set.truncated"] : raw;
         }
-        catch (Exception e) { _probe = "失敗：" + e.Message; }
+        catch (Exception e) { _probe = L.F("set.failed", e.Message); }
         _probing = false;
     }
 
@@ -104,11 +105,11 @@
     void SaveMember()
     {
         var name = _mName.Trim();
-        if (name.Length == 0) { State.ShowNotice("請輸入名單名稱"); return; }
+        if (name.Length == 0) { State.ShowNotice(L["mem.needname"]); return; }
         var entries = UrlParser.SplitInput(_mEntries).ToList();
         var existing = _members.FirstOrDefault(m => m.Name == _editing);
         if (existing is not null) { existing.Name = name; existing.Entries = entries; }
-        else if (_members.Any(m => m.Name == name)) { State.ShowNotice("已有同名名單"); return; }
+        else if (_members.Any(m => m.Name == name)) { State.ShowNotice(L["mem.dupe"]); return; }
         else _members.Add(new MemberList { Name = name, Entries = entries });
         _editing = name;
         State.SaveMembers(_members.Select(m => new MemberList { Name = m.Name, Entries = new(m.Entries) }).ToList());

@@ -1,19 +1,20 @@
+@inject Loc L
 <div class="modal-back" @onclick="OnClose">
     <div class="modal" @onclick:stopPropagation="true">
-        <h2>快捷鍵 <button class="btn" @onclick="OnClose">✕</button></h2>
+        <h2>@L["help.title"] <button class="btn" @onclick="OnClose">✕</button></h2>
         <table class="keys">
-            <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>切換音源到第 N 格（依畫面位置）</td></tr>
-            <tr><td><kbd>M</kbd></td><td>全部靜音</td></tr>
-            <tr><td><kbd>C</kbd></td><td>全域控制模式（可操作 YouTube 控制列）</td></tr>
-            <tr><td><kbd>F</kbd></td><td>全螢幕</td></tr>
-            <tr><td><kbd>H</kbd></td><td>隱藏／顯示工具列與標題列</td></tr>
-            <tr><td><kbd>Esc</kbd></td><td>取消放大／關閉視窗</td></tr>
-            <tr><td><kbd>?</kbd></td><td>顯示此列表</td></tr>
-            <tr><td>單擊畫面／標題列</td><td>音源切到該格；再點一次＝全部靜音</td></tr>
-            <tr><td>雙擊標題列</td><td>放大／還原該格</td></tr>
-            <tr><td>拖曳標題列</td><td>與另一格交換位置</td></tr>
+            <tr><td><kbd>1</kbd>–<kbd>9</kbd></td><td>@L["help.digits"]</td></tr>
+            <tr><td><kbd>M</kbd></td><td>@L["help.m"]</td></tr>
+            <tr><td><kbd>C</kbd></td><td>@L["help.c"]</td></tr>
+            <tr><td><kbd>F</kbd></td><td>@L["help.f"]</td></tr>
+            <tr><td><kbd>H</kbd></td><td>@L["help.h"]</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>@L["help.esc"]</td></tr>
+            <tr><td><kbd>?</kbd></td><td>@L["help.q"]</td></tr>
+            <tr><td>@L["help.click"]</td><td>@L["help.click.d"]</td></tr>
+            <tr><td>@L["help.dbl"]</td><td>@L["help.dbl.d"]</td></tr>
+            <tr><td>@L["help.drag"]</td><td>@L["help.drag.d"]</td></tr>
         </table>
-        <p class="hint">輸入框聚焦時快捷鍵不會觸發。</p>
+        <p class="hint">@L["help.note"]</p>
     </div>
 </div>
 

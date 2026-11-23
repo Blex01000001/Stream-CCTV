@@ -25,4 +25,5 @@ public class HolodexChannel
     public string? Org { get; set; }
 }
 
-public record HolodexResult(List<HolodexVideo> Videos, string? Error);
+/// <summary>Error 是在地化鍵值，Detail 是參數</summary>
+public record HolodexResult(List<HolodexVideo> Videos, string? Error, string? Detail = null);
