@@ -43,7 +43,7 @@ public class Loc
 
     static readonly Dictionary<string, Pair> T = new()
     {
-        ["app.title"] = P("Stream Wall", "直播監視器牆"),
+        ["app.title"] = P("Stream CCTV", "Stream CCTV"),
 
         // toolbar
         ["tb.placeholder"] = P("Paste YouTube / Twitch URLs or IDs, press Enter", "貼上 YouTube / Twitch 網址或 ID，按 Enter"),
