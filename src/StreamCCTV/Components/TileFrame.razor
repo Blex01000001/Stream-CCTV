@@ -1,0 +1,101 @@
+@implements IAsyncDisposable
+@inject WallState State
+@inject PlayerService Player
+
+@* 播放器容器 .player-host 內不放任何 Razor 內容，iframe 由 player.js 建立。 *@
+<div class="tile @(IsAudio ? "audio" : "") @(Zoomed ? "zoomed" : "") @(Dim ? "dim" : "")"
+     style="@Style" data-tile-id="@Tile.Id" data-name="@Tile.DisplayName">
+    <TileTitleBar Tile="Tile" IsAudio="IsAudio" ControlMode="Control"
+                  OnAudio="() => State.ToggleAudioAsync(Tile.Id)"
+                  OnControl="() => State.ToggleControl(Tile.Id)"
+                  OnReload="() => State.ReloadAsync(Tile.Id)"
+                  OnRemove="() => State.RemoveTileAsync(Tile.Id)"
+                  OnZoom="() => State.ToggleZoom(Tile.Id)" />
+    <div class="tile-body">
+        <div class="player-box"><div class="player-host" @ref="_host"></div></div>
+        <div class="tile-overlay @(Control ? "off" : "")" @onclick="() => State.ToggleAudioAsync(Tile.Id)"></div>
+        @if (Tile.Status is TileStatus.Error or TileStatus.NotLive or TileStatus.Offline)
+        {
+            <div class="tile-msg @(Tile.Status == TileStatus.Error ? "err" : "")">
+                <div class="msg-text">@Message</div>
+                <a class="msg-link" href="@Tile.OpenUrl" target="_blank" rel="noopener">在 @Tile.OpenSiteName 開啟</a>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Tile Tile { get; set; } = default!;
+
+    ElementReference _host;
+    DotNetObjectReference<TileFrame>? _self;
+    string? _lastKey;
+
+    bool IsAudio => State.ActiveAudioId == Tile.Id;
+    bool Zoomed => State.ZoomedId == Tile.Id;
+    bool Control => State.IsControl(Tile);
+    bool Dim => Tile.Status is TileStatus.NotLive or TileStatus.Offline;
+    string Style => $"grid-area:{Tile.GridArea};";
+    string Message => Tile.Status switch
+    {
+        TileStatus.NotLive => "未開台",
+        TileStatus.Offline => "離線",
+        _ => Tile.StatusMessage ?? "無法播放"
+    };
+
+    // 只有影響外觀（外層 style、標題列、狀態）的值變了才重繪；播放器容器本身永遠不被重建。
+    protected override bool ShouldRender()
+    {
+        var key = string.Join('|', Tile.GridArea, Tile.DisplayName, Tile.Viewers, Tile.Status, Tile.StatusMessage,
+            IsAudio, Control, Zoomed, Tile.Id);
+        if (key == _lastKey) return false;
+        _lastKey = key;
+        return true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _self = DotNetObjectReference.Create(this);
+        await Player.CreateAsync(Tile, _host, _self);
+    }
+
+    [JSInvokable]
+    public async Task OnPlayerEvent(string kind, string data)
+    {
+        switch (kind)
+        {
+            case "ready":
+            case "playing":
+            case "online":
+                if (Tile.Status != TileStatus.Error || kind != "ready") State.SetStatus(Tile.Id, TileStatus.Playing);
+                break;
+            case "offline":
+                State.SetStatus(Tile.Id, TileStatus.Offline);
+                break;
+            case "error":
+                if (Tile.Source == TileSource.YouTubeChannel && data is "100" or "101" or "150" or "2")
+                    State.SetStatus(Tile.Id, TileStatus.NotLive);
+                else
+                    State.SetStatus(Tile.Id, TileStatus.Error, data switch
+                    {
+                        "2" => "影片 ID 無效",
+                        "5" => "播放器發生錯誤，請重新整理",
+                        "100" => "影片不存在、已刪除或設為私人",
+                        "101" or "150" => "此影片禁止嵌入或為會員限定",
+                        "script" => "播放器腳本載入失敗（網路或擴充功能封鎖？）",
+                        _ => "無法播放（錯誤 " + data + "）"
+                    });
+                break;
+            case "muteMismatch":
+                await State.OnActualMuteChangedAsync(Tile.Id, data == "true");
+                break;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Player.DestroyAsync(Tile.Id);
+        _self?.Dispose();
+    }
+}

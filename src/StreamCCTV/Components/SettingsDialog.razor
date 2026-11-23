@@ -1,0 +1,123 @@
+@inject WallState State
+@inject IHolodexService Holodex
+
+<div class="modal-back" @onclick="OnClose">
+    <div class="modal wide" @onclick:stopPropagation="true">
+        <h2>設定 <button class="btn" @onclick="OnClose">✕</button></h2>
+
+        <h3>Holodex</h3>
+        <div class="form">
+            <label>API Key
+                <input type="password" autocomplete="off" @bind="_key" @bind:event="oninput" placeholder="只存在這台瀏覽器的 localStorage" />
+            </label>
+            <label>組織 (org)
+                <input @bind="_org" @bind:event="oninput" />
+            </label>
+            <label>標題關鍵字 / topic
+                <input @bind="_keyword" @bind:event="oninput" placeholder="留空＝顯示全部" />
+            </label>
+            <div class="row">
+                <button class="btn primary" @onclick="SaveSettings">儲存</button>
+                <button class="btn" disabled="@(string.IsNullOrWhiteSpace(_key) || _probing)" @onclick="ProbeAsync">探勘 Holodex（顯示原始 JSON）</button>
+            </div>
+            @if (_probe is not null)
+            {
+                <pre class="probe">@_probe</pre>
+            }
+        </div>
+
+        <h3>成員名單</h3>
+        <div class="form">
+            <div class="row">
+                <select class="sel" @onchange="OnPick">
+                    <option value="">＋ 新增名單</option>
+                    @foreach (var m in _members)
+                    {
+                        <option value="@m.Name" selected="@(_editing == m.Name)">@m.Name</option>
+                    }
+                </select>
+                @if (_editing is not null)
+                {
+                    <button class="btn danger" @onclick="DeleteMember">刪除此名單</button>
+                }
+            </div>
+            <label>名稱 <input @bind="_mName" @bind:event="oninput" /></label>
+            <label>頻道清單（每行一個網址 / 影片 ID / 頻道 ID）
+                <textarea rows="6" @bind="_mEntries" @bind:event="oninput"></textarea>
+            </label>
+            <div class="row"><button class="btn primary" @onclick="SaveMember">@(_editing is null ? "新增名單" : "儲存修改")</button></div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    string _key = "", _org = "", _keyword = "";
+    string? _probe;
+    bool _probing;
+    List<MemberList> _members = new();
+    string? _editing;
+    string _mName = "", _mEntries = "";
+
+    protected override void OnInitialized()
+    {
+        var s = State.Settings;
+        (_key, _org, _keyword) = (s.HolodexApiKey, s.Org, s.FilterKeyword);
+        _members = State.Members.Select(m => new MemberList { Name = m.Name, Entries = new(m.Entries) }).ToList();
+    }
+
+    void SaveSettings()
+    {
+        State.UpdateSettings(new AppSettings
+        {
+            HolodexApiKey = _key.Trim(),
+            Org = string.IsNullOrWhiteSpace(_org) ? "Hololive" : _org.Trim(),
+            FilterKeyword = _keyword.Trim(),
+            Volume = State.Settings.Volume
+        });
+        State.ShowNotice("設定已儲存");
+    }
+
+    async Task ProbeAsync()
+    {
+        _probing = true; _probe = "讀取中…";
+        try
+        {
+            var raw = await Holodex.GetLiveRawAsync(_key.Trim(), string.IsNullOrWhiteSpace(_org) ? "Hololive" : _org.Trim());
+            Console.WriteLine(raw);   // 完整內容也輸出到瀏覽器 console
+            _probe = raw.Length > 6000 ? raw[..6000] + "\n…（已截斷，完整內容見瀏覽器 console）" : raw;
+        }
+        catch (Exception e) { _probe = "失敗：" + e.Message; }
+        _probing = false;
+    }
+
+    void OnPick(ChangeEventArgs e)
+    {
+        var name = e.Value?.ToString();
+        var m = _members.FirstOrDefault(x => x.Name == name);
+        _editing = m?.Name;
+        _mName = m?.Name ?? "";
+        _mEntries = m is null ? "" : string.Join('\n', m.Entries);
+    }
+
+    void SaveMember()
+    {
+        var name = _mName.Trim();
+        if (name.Length == 0) { State.ShowNotice("請輸入名單名稱"); return; }
+        var entries = UrlParser.SplitInput(_mEntries).ToList();
+        var existing = _members.FirstOrDefault(m => m.Name == _editing);
+        if (existing is not null) { existing.Name = name; existing.Entries = entries; }
+        else if (_members.Any(m => m.Name == name)) { State.ShowNotice("已有同名名單"); return; }
+        else _members.Add(new MemberList { Name = name, Entries = entries });
+        _editing = name;
+        State.SaveMembers(_members.Select(m => new MemberList { Name = m.Name, Entries = new(m.Entries) }).ToList());
+    }
+
+    void DeleteMember()
+    {
+        _members.RemoveAll(m => m.Name == _editing);
+        _editing = null; _mName = _mEntries = "";
+        State.SaveMembers(_members.Select(m => new MemberList { Name = m.Name, Entries = new(m.Entries) }).ToList());
+    }
+}

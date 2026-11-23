@@ -1,0 +1,46 @@
+@implements IAsyncDisposable
+@inject WallState State
+@inject IJSRuntime JS
+
+@* Tiles 清單的 DOM 順序永遠不變；位置只靠各格的 grid-area 決定。 *@
+<div class="wall" style="grid-template-columns:repeat(@State.Grid.Cols,1fr);grid-template-rows:repeat(@State.Grid.Rows,1fr);">
+    @foreach (var tile in State.Tiles)
+    {
+        <TileFrame @key="tile.Id" Tile="tile" />
+    }
+    @foreach (var (slot, area) in State.FreeSlots())
+    {
+        <div @key='"slot-" + slot' class="slot-empty" data-slot="@slot" style="grid-area:@area;" @onclick="State.RequestFocusInput">＋ 加入</div>
+    }
+</div>
+
+@code {
+    IJSObjectReference? _drag;
+    DotNetObjectReference<Wall>? _self;
+
+    protected override void OnInitialized() => State.OnChange += Refresh;
+
+    void Refresh() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _drag = await JS.InvokeAsync<IJSObjectReference>("import", "./js/drag.js");
+            _self = DotNetObjectReference.Create(this);
+            await _drag.InvokeVoidAsync("init", _self);
+        }
+        catch (Exception e) { Console.WriteLine(e.Message); }
+    }
+
+    [JSInvokable] public void SwapTiles(string a, string b) => InvokeAsync(() => State.SwapTiles(a, b));
+    [JSInvokable] public void MoveToSlot(string id, int slot) => InvokeAsync(() => State.MoveToSlot(id, slot));
+
+    public async ValueTask DisposeAsync()
+    {
+        State.OnChange -= Refresh;
+        try { if (_drag is not null) { await _drag.InvokeVoidAsync("dispose"); await _drag.DisposeAsync(); } } catch { }
+        _self?.Dispose();
+    }
+}

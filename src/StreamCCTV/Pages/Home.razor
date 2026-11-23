@@ -1,0 +1,76 @@
+@page "/"
+@implements IAsyncDisposable
+@inject WallState State
+@inject IJSRuntime JS
+
+<PageTitle>直播監視器牆</PageTitle>
+
+<div class="app @(State.HideBars ? "hide-bars" : "")">
+    <Toolbar OnOpenSettings="() => _settings = true" OnOpenHelp="() => _help = true" />
+    <LiveBar />
+    @if (State.Notice is not null)
+    {
+        <div class="notice">@State.Notice</div>
+    }
+    <Wall />
+</div>
+
+@if (_settings)
+{
+    <SettingsDialog OnClose="() => _settings = false" />
+}
+@if (_help)
+{
+    <ShortcutHelp OnClose="() => _help = false" />
+}
+
+@code {
+    bool _settings, _help;
+    IJSObjectReference? _kb;
+    DotNetObjectReference<Home>? _self;
+
+    protected override async Task OnInitializedAsync()
+    {
+        State.OnChange += Refresh;
+        await State.LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _kb = await JS.InvokeAsync<IJSObjectReference>("import", "./js/keyboard.js");
+            _self = DotNetObjectReference.Create(this);
+            await _kb.InvokeVoidAsync("init", _self);
+        }
+        catch (Exception e) { Console.WriteLine(e.Message); }
+    }
+
+    void Refresh() => InvokeAsync(StateHasChanged);
+
+    [JSInvokable]
+    public async Task OnKey(string key)
+    {
+        if (key.Length == 1 && key[0] >= '1' && key[0] <= '9') { await State.SelectByPositionAsync(key[0] - '0'); return; }
+        switch (key)
+        {
+            case "m": await State.MuteAllAsync(); break;
+            case "c": State.ToggleGlobalControl(); break;
+            case "h": State.ToggleHideBars(); break;
+            case "?": _help = !_help; await InvokeAsync(StateHasChanged); break;
+            case "f": if (_kb is not null) await _kb.InvokeVoidAsync("toggleFullscreen"); break;
+            case "Escape":
+                if (_help || _settings) { _help = _settings = false; await InvokeAsync(StateHasChanged); }
+                else State.ClearZoom();
+                break;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        State.OnChange -= Refresh;
+        try { if (_kb is not null) { await _kb.InvokeVoidAsync("dispose"); await _kb.DisposeAsync(); } } catch { }
+        _self?.Dispose();
+    }
+}

@@ -1,0 +1,108 @@
+@implements IDisposable
+@inject WallState State
+@inject IHolodexService Holodex
+
+@if (HasKey)
+{
+    <div class="livebar">
+        @if (_error is not null)
+        {
+            <span class="live-err">⚠ @_error</span>
+        }
+        @foreach (var e in Entries)
+        {
+            var onWall = State.HasSource(e.Source, e.Ref);
+            <button class="live-item @(onWall ? "on" : "")" title="@e.Title" @onclick="() => State.AddTile(e.Source, e.Ref, e.Name)">
+                @if (!string.IsNullOrEmpty(e.Photo)) { <img src="@e.Photo" alt="" loading="lazy" referrerpolicy="no-referrer" /> }
+                <span class="live-name">@e.Name</span>
+                <span class="live-v">@(e.Viewers is int v ? v.ToString("N0") : "")</span>
+                @if (onWall) { <span class="live-ok">✓</span> }
+            </button>
+        }
+        @if (_loaded && !Entries.Any() && _error is null)
+        {
+            <span class="live-empty">目前沒有符合「@State.Settings.FilterKeyword」的直播</span>
+        }
+    </div>
+}
+
+@code {
+    record LiveEntry(TileSource Source, string Ref, string Name, string? Photo, int? Viewers, string Title);
+
+    List<HolodexVideo> _videos = new();
+    string? _error;
+    bool _loaded;
+    CancellationTokenSource? _cts;
+
+    bool HasKey => !string.IsNullOrWhiteSpace(State.Settings.HolodexApiKey);
+
+    IEnumerable<LiveEntry> Entries
+    {
+        get
+        {
+            var kw = Normalize(State.Settings.FilterKeyword);
+            foreach (var v in _videos.Where(v => v.Status is null or "live").OrderByDescending(v => v.LiveViewers ?? 0))
+            {
+                if (kw.Length > 0 && !(Normalize(v.Title).Contains(kw) || Normalize(v.TopicId).Contains(kw))) continue;
+                var name = v.Channel?.EnglishName ?? v.Channel?.Name ?? "?";
+                var tw = WallState.TwitchName(v);
+                if (tw is not null)
+                    yield return new(TileSource.Twitch, tw, name, v.Channel?.Photo, v.LiveViewers, v.Title ?? "");
+                else if (v.Type != "placeholder" && v.Id is not null)
+                    yield return new(TileSource.YouTube, v.Id, name, v.Channel?.Photo, v.LiveViewers, v.Title ?? "");
+            }
+        }
+    }
+
+    static string Normalize(string? s) => (s ?? "").Replace("_", "").Replace(" ", "").ToLowerInvariant();
+
+    protected override void OnInitialized()
+    {
+        State.OnChange += Refresh;
+        State.OnSettingsChanged += Restart;
+        Restart();
+    }
+
+    void Refresh() => InvokeAsync(StateHasChanged);
+
+    // 有 Key 才輪詢；設定變更時重新啟動
+    void Restart()
+    {
+        _cts?.Cancel();
+        _cts = null;
+        if (!HasKey) { _videos = new(); _error = null; _loaded = false; Refresh(); return; }
+        _cts = new CancellationTokenSource();
+        _ = PollAsync(_cts.Token);
+    }
+
+    async Task PollAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(90));
+            await FetchAsync(ct);
+            while (await timer.WaitForNextTickAsync(ct)) await FetchAsync(ct);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    async Task FetchAsync(CancellationToken ct)
+    {
+        var res = await Holodex.GetLiveAsync(State.Settings.HolodexApiKey, State.Settings.Org, ct);
+        if (ct.IsCancellationRequested) return;
+        if (res.Error is not null) _error = res.Error;
+        else
+        {
+            _error = null; _videos = res.Videos; _loaded = true;
+            State.ApplyLive(_videos);     // 只更新標題列資料
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        State.OnChange -= Refresh;
+        State.OnSettingsChanged -= Restart;
+        _cts?.Cancel();
+    }
+}

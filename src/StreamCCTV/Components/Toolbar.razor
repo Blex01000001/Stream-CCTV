@@ -1,0 +1,113 @@
+@implements IAsyncDisposable
+@inject WallState State
+@inject StorageService Storage
+@inject IJSRuntime JS
+
+<div class="toolbar">
+    <textarea @ref="_input" rows="1" class="add-input"
+              placeholder="貼上 YouTube / Twitch 網址、影片 ID、UC 頻道 ID（Enter 加入，可多行）"></textarea>
+    <button class="btn primary" @onclick="AddAsync">加入</button>
+
+    <select class="sel" title="布局" @onchange="OnLayout">
+        @foreach (var l in Layouts.All)
+        {
+            <option value="@l.Id" selected="@(State.Layout.Id == l.Id)">@l.Name</option>
+        }
+    </select>
+
+    <select class="sel" title="成員名單" @onchange="OnMember">
+        <option value="">成員名單…</option>
+        @foreach (var m in State.Members)
+        {
+            <option value="@m.Name" selected="@(_member == m.Name)">@m.Name（@m.Entries.Count）</option>
+        }
+    </select>
+    <button class="btn" disabled="@(string.IsNullOrEmpty(_member))" @onclick="LoadMember">載入</button>
+
+    <button class="btn" @onclick="ShareAsync">分享</button>
+
+    <label class="vol" title="目前音源格的音量">
+        🔊 <input type="range" min="0" max="100" value="@State.Settings.Volume" @oninput="OnVolume" />
+    </label>
+    <button class="btn" title="全部靜音（M）" @onclick="State.MuteAllAsync">🔇 全靜音</button>
+
+    <span class="spacer"></span>
+    <button class="btn @(State.GlobalControl ? "on" : "")" title="全域控制模式（C）" @onclick="State.ToggleGlobalControl">🎛</button>
+    <button class="btn" title="隱藏工具列與標題列（H）" @onclick="State.ToggleHideBars">隱藏</button>
+    <button class="btn" title="全螢幕（F）" @onclick="FullscreenAsync">⛶</button>
+    <button class="btn" title="設定" @onclick="OnOpenSettings">⚙</button>
+    <button class="btn" title="快捷鍵（?）" @onclick="OnOpenHelp">?</button>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnOpenSettings { get; set; }
+    [Parameter] public EventCallback OnOpenHelp { get; set; }
+
+    ElementReference _input;
+    IJSObjectReference? _kb;
+    DotNetObjectReference<Toolbar>? _self;
+    string _member = "";
+
+    protected override void OnInitialized()
+    {
+        State.OnChange += Refresh;
+        State.OnFocusInput += FocusInput;
+    }
+
+    void Refresh() => InvokeAsync(StateHasChanged);
+
+    async void FocusInput()
+    {
+        if (State.HideBars) State.ToggleHideBars();
+        try { await Task.Delay(30); if (_kb is not null) await _kb.InvokeVoidAsync("focus", _input); } catch { }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _kb = await JS.InvokeAsync<IJSObjectReference>("import", "./js/keyboard.js");
+        _self = DotNetObjectReference.Create(this);
+        await _kb.InvokeVoidAsync("bindSubmit", _input, _self);
+    }
+
+    void OnLayout(ChangeEventArgs e) => State.SetLayout(e.Value?.ToString() ?? "2x2");
+    void OnMember(ChangeEventArgs e) => _member = e.Value?.ToString() ?? "";
+    Task OnVolume(ChangeEventArgs e) => State.SetVolumeAsync(int.TryParse(e.Value?.ToString(), out var v) ? v : 60);
+
+    [JSInvokable] public Task Submit() => AddAsync();
+
+    async Task AddAsync()
+    {
+        if (_kb is null) return;
+        var text = await _kb.InvokeAsync<string>("takeValue", _input);
+        if (string.IsNullOrWhiteSpace(text)) return;
+        var failed = State.AddFromText(text);
+        if (failed.Count > 0) await _kb.InvokeVoidAsync("setValue", _input, string.Join('\n', failed));
+    }
+
+    void LoadMember()
+    {
+        var list = State.Members.FirstOrDefault(m => m.Name == _member);
+        if (list is not null) State.LoadMemberList(list);
+    }
+
+    async Task ShareAsync()
+    {
+        var url = State.BuildShareUrl();
+        var ok = await Storage.CopyToClipboardAsync(url);
+        State.ShowNotice(ok ? "已複製分享連結到剪貼簿" : "無法複製，連結：" + url);
+    }
+
+    async Task FullscreenAsync()
+    {
+        if (_kb is not null) await _kb.InvokeVoidAsync("toggleFullscreen");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        State.OnChange -= Refresh;
+        State.OnFocusInput -= FocusInput;
+        try { if (_kb is not null) await _kb.DisposeAsync(); } catch { }
+        _self?.Dispose();
+    }
+}

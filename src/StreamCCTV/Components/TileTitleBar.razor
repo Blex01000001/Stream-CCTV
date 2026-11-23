@@ -1,0 +1,46 @@
+<div class="titlebar" data-drag @onclick="OnClick" @ondblclick="OnDblClick">
+    <span class="tb-left">
+        <span class="grip" title="拖曳以交換位置">⠿</span>
+        <span class="tb-name" title="@Tile.DisplayName">@Tile.DisplayName</span>
+        @if (ControlMode)
+        {
+            <span class="tb-ctl">控制模式</span>
+        }
+    </span>
+    <span class="tb-mid">@(Tile.Viewers is int v ? $"👁 {v:N0}" : "—")</span>
+    <span class="tb-right">
+        <button class="tb-btn @(IsAudio ? "on" : "")" title="切換音源" @onclick="OnAudio" @onclick:stopPropagation="true" @ondblclick:stopPropagation="true">@(IsAudio ? "🔊" : "🔇")</button>
+        <button class="tb-btn @(ControlMode ? "on" : "")" title="控制模式（可操作 YouTube 控制列）" @onclick="OnControl" @onclick:stopPropagation="true" @ondblclick:stopPropagation="true">🎛</button>
+        <button class="tb-btn" title="重新整理" @onclick="OnReload" @onclick:stopPropagation="true" @ondblclick:stopPropagation="true">⟳</button>
+        <a class="tb-btn" title="在 @Tile.OpenSiteName 開啟" href="@Tile.OpenUrl" target="_blank" rel="noopener" @onclick:stopPropagation="true" @ondblclick:stopPropagation="true">↗</a>
+        <button class="tb-btn" title="移除" @onclick="OnRemove" @onclick:stopPropagation="true" @ondblclick:stopPropagation="true">✕</button>
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Tile Tile { get; set; } = default!;
+    [Parameter] public bool IsAudio { get; set; }
+    [Parameter] public bool ControlMode { get; set; }
+    [Parameter] public EventCallback OnAudio { get; set; }
+    [Parameter] public EventCallback OnControl { get; set; }
+    [Parameter] public EventCallback OnReload { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+    [Parameter] public EventCallback OnZoom { get; set; }
+
+    bool _dbl;
+
+    // 單擊 = 切音源；雙擊 = 放大。單擊延遲一下，看有沒有接著雙擊。
+    async Task OnClick(MouseEventArgs e)
+    {
+        if (e.Detail > 1) return;
+        _dbl = false;
+        await Task.Delay(260);
+        if (!_dbl) await OnAudio.InvokeAsync();
+    }
+
+    async Task OnDblClick()
+    {
+        _dbl = true;
+        await OnZoom.InvokeAsync();
+    }
+}
