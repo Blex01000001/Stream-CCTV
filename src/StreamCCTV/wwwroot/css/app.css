@@ -45,10 +45,11 @@ html, body { height: 100%; margin: 0; background: #000; color: var(--text); over
 .slot-empty { display: flex; align-items: center; justify-content: center; border: 2px dashed #6a6a6a; border-radius: 12px; color: #a8a8a8; font-size: 20px; font-weight: 700; letter-spacing: .5px; cursor: pointer; min-width: 0; min-height: 0; }
 .slot-empty:hover { color: #fff; border-color: var(--accent); background: rgba(46, 204, 113, .07); }
 
-.titlebar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 26px; padding: 0 4px 0 6px; background: #141414; color: #ccc; cursor: pointer; user-select: none; touch-action: none; }
+.titlebar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 32px; padding: 0 4px 0 4px; background: #141414; color: #ccc; cursor: pointer; user-select: none; touch-action: none; }
 .tile.audio .titlebar { background: #11271a; }
 .tb-left { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; }
-.grip { cursor: grab; color: #777; }
+.grip { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 24px; margin-left: -2px; font-size: 22px; line-height: 1; color: #bbb; background: #262626; border-radius: 4px; cursor: grab; }
+.grip:hover { color: #fff; background: #3a3a3a; }
 .tb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-ctl { font-size: 11px; color: #f0c060; border: 1px solid #6a5420; border-radius: 3px; padding: 0 4px; }
 .tb-mid { flex: none; color: #9ab; font-size: 12px; }
