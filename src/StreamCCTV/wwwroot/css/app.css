@@ -87,10 +87,9 @@ html, body { height: 100%; margin: 0; background: #000; color: var(--text); over
 .hide-titles .titlebar:hover { opacity: 1; }
 
 /* 工具列隱藏時的還原列 */
-.peek { flex: none; display: flex; justify-content: center; gap: 6px; height: 16px; background: #0c0c0c; border-bottom: 1px solid #1c1c1c; opacity: .55; transition: opacity .15s, height .15s; overflow: hidden; }
-.peek:hover { opacity: 1; height: 26px; }
-.peek-btn { padding: 0 12px; background: transparent; color: #bbb; border: 0; font: inherit; font-size: 11px; cursor: pointer; }
-.peek:hover .peek-btn { font-size: 12px; }
+.peek { flex: none; display: flex; justify-content: center; gap: 6px; height: 20px; background: #0c0c0c; border-bottom: 1px solid #1c1c1c; opacity: .55; transition: opacity .15s; overflow: hidden; }
+.peek:hover { opacity: 1; }
+.peek-btn { padding: 0 12px; background: transparent; color: #bbb; border: 0; font: inherit; font-size: 12px; line-height: 20px; cursor: pointer; }
 .peek-btn:hover { color: #fff; background: #222; }
 .peek-btn.on { color: var(--accent); }
 
