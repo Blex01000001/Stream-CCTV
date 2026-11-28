@@ -25,7 +25,10 @@ public class WallState
     public string? ActiveAudioId { get; private set; }
     public string? ZoomedId { get; private set; }
     public bool GlobalControl { get; private set; }
-    public bool HideBars { get; private set; }
+    /// <summary>工具列（含 Holodex 直播列）是否隱藏</summary>
+    public bool HideToolbar { get; private set; }
+    /// <summary>各格標題列是否隱藏（滑鼠移到格子上方仍會淡入）</summary>
+    public bool HideTitles { get; private set; }
     public AppSettings Settings { get; private set; } = new();
     public List<MemberList> Members { get; private set; } = new();
     public string? Notice { get; private set; }
@@ -255,7 +258,16 @@ public class WallState
     }
 
     public void ToggleGlobalControl() { GlobalControl = !GlobalControl; Notify(); }
-    public void ToggleHideBars() { HideBars = !HideBars; Notify(); }
+    public void ToggleToolbar() { HideToolbar = !HideToolbar; Notify(); }
+    public void ToggleTitles() { HideTitles = !HideTitles; Notify(); }
+
+    /// <summary>H 鍵：有任何一項顯示就全部隱藏，兩項都已隱藏就全部還原</summary>
+    public void ToggleHideBars()
+    {
+        var hide = !(HideToolbar && HideTitles);
+        HideToolbar = HideTitles = hide;
+        Notify();
+    }
     public bool IsControl(Tile t) => GlobalControl || t.Control;
 
     public void SetStatus(string id, TileStatus status, string? message = null)

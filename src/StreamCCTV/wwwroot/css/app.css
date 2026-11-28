@@ -82,9 +82,17 @@ html, body { height: 100%; margin: 0; background: #000; color: var(--text); over
 .msg-link { pointer-events: auto; color: var(--blue); }
 
 /* 隱藏模式 */
-.hide-bars .toolbar, .hide-bars .livebar { display: none; }
-.hide-bars .titlebar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; opacity: 0; transition: opacity .2s; background: rgba(20, 20, 20, .92); }
-.hide-bars .titlebar:hover { opacity: 1; }
+.hide-toolbar .toolbar, .hide-toolbar .livebar { display: none; }
+.hide-titles .titlebar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; opacity: 0; transition: opacity .2s; background: rgba(20, 20, 20, .92); }
+.hide-titles .titlebar:hover { opacity: 1; }
+
+/* 工具列隱藏時的還原列 */
+.peek { flex: none; display: flex; justify-content: center; gap: 6px; height: 16px; background: #0c0c0c; border-bottom: 1px solid #1c1c1c; opacity: .55; transition: opacity .15s, height .15s; overflow: hidden; }
+.peek:hover { opacity: 1; height: 26px; }
+.peek-btn { padding: 0 12px; background: transparent; color: #bbb; border: 0; font: inherit; font-size: 11px; cursor: pointer; }
+.peek:hover .peek-btn { font-size: 12px; }
+.peek-btn:hover { color: #fff; background: #222; }
+.peek-btn.on { color: var(--accent); }
 
 /* 拖曳 */
 body.dragging, body.dragging * { cursor: grabbing !important; user-select: none; }

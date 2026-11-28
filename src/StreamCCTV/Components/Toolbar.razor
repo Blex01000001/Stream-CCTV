@@ -43,7 +43,8 @@
 
     <span class="spacer"></span>
     <button class="btn @(State.GlobalControl ? "on" : "")" title="@L["tb.control"]" @onclick="State.ToggleGlobalControl">🎛</button>
-    <button class="btn" title="@L["tb.hide.tip"]" @onclick="State.ToggleHideBars">@L["tb.hide"]</button>
+    <button class="btn @(State.HideTitles ? "" : "on")" title="@L["tb.titles.tip"]" @onclick="State.ToggleTitles">@L["tb.titles"]</button>
+    <button class="btn" title="@L["tb.hide.tip"]" @onclick="State.ToggleToolbar">@L["tb.hide"]</button>
     <button class="btn" title="@L["tb.fullscreen"]" @onclick="FullscreenAsync">⛶</button>
     <button class="btn" title="@L["tb.settings"]" @onclick="OnOpenSettings">⚙</button>
     <button class="btn" title="@L["tb.help"]" @onclick="OnOpenHelp">?</button>
@@ -71,7 +72,7 @@
 
     async void FocusInput()
     {
-        if (State.HideBars) State.ToggleHideBars();
+        if (State.HideToolbar) State.ToggleToolbar();
         try { await Task.Delay(30); if (_kb is not null) await _kb.InvokeVoidAsync("focus", _input); } catch { }
     }
 
