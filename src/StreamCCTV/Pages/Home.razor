@@ -6,9 +6,20 @@
 
 <PageTitle>@L["app.title"]</PageTitle>
 
-<div class="app @(State.HideBars ? "hide-bars" : "")">
-    <Toolbar OnOpenSettings="() => _settings = true" OnOpenHelp="() => _help = true" />
-    <LiveBar />
+<div class="app @(State.HideToolbar ? "hide-toolbar" : "") @(State.HideTitles ? "hide-titles" : "")">
+    @if (State.HideToolbar)
+    {
+        @* 工具列隱藏時保留一條細長的還原列，確保永遠有辦法叫回來 *@
+        <div class="peek">
+            <button class="peek-btn" title="@L["peek.show.tip"]" @onclick="State.ToggleToolbar">▼ @L["peek.show"]</button>
+            <button class="peek-btn @(State.HideTitles ? "" : "on")" title="@L["tb.titles.tip"]" @onclick="State.ToggleTitles">@L["tb.titles"]: @(State.HideTitles ? L["common.off"] : L["common.on"])</button>
+        </div>
+    }
+    else
+    {
+        <Toolbar OnOpenSettings="() => _settings = true" OnOpenHelp="() => _help = true" />
+        <LiveBar />
+    }
     @if (State.Notice is not null)
     {
         <div class="notice">@State.Notice</div>
